@@ -1,7 +1,6 @@
 import logging
 import json
 import os
-import urllib.request
 import datetime
 import openai
 import boto3
@@ -71,7 +70,9 @@ def lambda_handler(event, context):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     logger.info('CALLED: handle_message()')
-    response_message = ''
+
+    # 返答メッセージをデフォルト値で一旦設定
+    response_message = settings.MESSAGE_RESPONSE_DEF_EXCEPTION
     
     try:
         # メッセージ送信者のユーザーIDとメッセージ本文を取得
@@ -82,7 +83,7 @@ def handle_message(event):
         # 当該ユーザーの過去のメッセージを、DynamoDB から取得する（GSIを利用）
         past_messages = table.query(
             IndexName = 'UserIdIndex',
-            KeyConditionExpression = Key('UserId').eq(user_id)
+            KeyConditionExpression = Key('ChatUserId').eq(user_id)
         )
         
         # 受信したメッセージが「リセットワード」であった場合、後続処理は行わずに例外を出し、トークン超過時と同じDBのItem削除を行う。
@@ -123,7 +124,7 @@ def handle_message(event):
         )
         logger.info(f'OPENAI_RESULT: {result}')
         
-        # Token数が超過していた場合、例外を発生させて終了
+        # Token数が超過していた場合、メッセージにその旨を設定し、例外を発生させて終了
         if result.usage.total_tokens > settings.MAX_TOKEN:
             response_message = settings.MESSAGE_RESPONSE_EXCESS_TOKEN
             raise Exception('Tokenが超過')
@@ -134,7 +135,7 @@ def handle_message(event):
                 'ChatId':user_id + '#' + str(datetime.datetime.now()),
                 'ChatRole':'user', # 利用者の入力した文字は、"user"とする
                 'ChatMessage':chat_message,
-                'UserId':user_id,
+                'ChatUserId':user_id,
                 'CreatedAt':str(datetime.datetime.now()) # デフォルトでは世界標準時になる
             }
         )
@@ -146,26 +147,23 @@ def handle_message(event):
                 'ChatId':user_id + '#' + str(datetime.datetime.now()),
                 'ChatRole':'assistant', # GPTの返答内容は、'assistant' とする
                 'ChatMessage':response_message,
-                'UserId':user_id,
+                'ChatUserId':user_id,
                 'CreatedAt':str(datetime.datetime.now()) # デフォルトでは世界標準時になる
             }
         )
         
     except Exception as e:
         logger.info(f'ERROR: {e}')
-        
-        # response_message が空であれば、デフォルト値を設定をする。
-        if response_message == '':
-            response_message = settings.MESSAGE_RESPONSE_DEF_EXCEPTION
-        
+
         # 当該ユーザーの Item を DynamoDB から削除する（DB洗替処理）
         with table.batch_writer() as batch:
             for message in past_messages['Items']:
                 batch.delete_item(Key={'ChatId':message['ChatId']})
     
-    # メッセージを返信
-    logger.info(f'RESPONSE_MESSAGE: {response_message}')
-    line_bot_api.reply_message(
-        reply_token = event.reply_token,
-        messages    = TextSendMessage(text=response_message)
-    )
+    finally:
+        # メッセージを返信
+        logger.info(f'RESPONSE_MESSAGE: {response_message}')
+        line_bot_api.reply_message(
+            reply_token = event.reply_token,
+            messages    = TextSendMessage(text=response_message)
+        )

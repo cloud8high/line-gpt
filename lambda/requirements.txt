@@ -1,2 +1,2 @@
-line-bot-sdk
-openai
+line-bot-sdk==2.4.2
+openai==0.27.8
