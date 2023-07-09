@@ -6,6 +6,6 @@ from line_gpt.line_gpt_stack import LineGptStack
 
 
 app = cdk.App()
-LineGptStack(app, "line-gpt")
+LineGptStack(app, "LineGptStack")
 
 app.synth()
