@@ -97,7 +97,7 @@ def handle_message(event):
         # キャラクター基本設定を prompts に追加
         character_setting = {
             "role": "system",
-            "content": settings.CHARACTER_SETTING.format(username="西方")
+            "content": settings.CHARACTER_SETTING.format(username="西片")
         }
         prompts.append(character_setting)
         
