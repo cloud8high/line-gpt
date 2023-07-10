@@ -30,9 +30,9 @@ except ClientError as e:
 secrets  = json.loads(get_secret_value_response['SecretString'])
 
 # APIキーの取得
-LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN = secrets["LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN"]
-LINE_MESSAGING_API_CHANNEL_SECRET       = secrets["LINE_MESSAGING_API_CHANNEL_SECRET"]
-OPEN_AI_API_KEY                         = secrets["OPEN_AI_API_KEY"]
+LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN = secrets['LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN']
+LINE_MESSAGING_API_CHANNEL_SECRET       = secrets['LINE_MESSAGING_API_CHANNEL_SECRET']
+OPEN_AI_API_KEY                         = secrets['OPEN_AI_API_KEY']
 
 # LINE Bot API と Open AI API の設定
 line_bot_api    = LineBotApi(LINE_MESSAGING_API_CHANNEL_ACCESS_TOKEN)
@@ -96,23 +96,23 @@ def handle_message(event):
         
         # キャラクター基本設定を prompts に追加
         character_setting = {
-            "role": "system",
-            "content": settings.CHARACTER_SETTING.format(username="西片")
+            'role': 'system',
+            'content': settings.CHARACTER_SETTING.format(username=settings.SAMPLE_USERNAME)
         }
         prompts.append(character_setting)
         
         # 取得した過去のチャットメッセージを prompts に追加
         for message in past_messages['Items']:
             message_setting = {
-                "role": message['ChatRole'],
-                "content": message['ChatMessage']
+                'role': message['ChatRole'],
+                'content': message['ChatMessage']
             }
             prompts.append(message_setting)
         
         # 受信したチャットメッセージも prompts に追加
         new_message_setting = {
-            "role": 'user',
-            "content": chat_message
+            'role': 'user',
+            'content': chat_message
         }
         prompts.append(new_message_setting)
         
@@ -133,7 +133,7 @@ def handle_message(event):
         table.put_item(
             Item = {
                 'ChatId':user_id + '#' + str(datetime.datetime.now()),
-                'ChatRole':'user', # 利用者の入力した文字は、"user"とする
+                'ChatRole':'user', # 利用者の入力した文字は、'user'とする
                 'ChatMessage':chat_message,
                 'ChatUserId':user_id,
                 'CreatedAt':str(datetime.datetime.now()) # デフォルトでは世界標準時になる

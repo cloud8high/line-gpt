@@ -15,6 +15,9 @@ MESSAGE_RESPONSE_RESET_WORD     = '【システム】\nリセットの指示を�
 MESSAGE_RESPONSE_EXCESS_TOKEN   = '【システム】\n記憶できる文字数の上限に達しました。\n これまでのやりとりは一旦リセットされますが、引き続きチャットをお楽しみいただけます。'
 MESSAGE_RESPONSE_DEF_EXCEPTION  = '【システム】\n一時的なトラブルが発生しました。\n これまでのやりとりは一旦リセットされますが、引き続きチャットをお楽しみいただけます。'
 
+# ユーザー名の設定（キャラクター設定次第では使わない場合もあり）
+SAMPLE_USERNAME = '西片'
+
 # キャラクター設定 
 # プロンプト設定のコツは、こちらを参照。 https://note.com/fladdict/n/neff2e9d52224
 
