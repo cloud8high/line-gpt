@@ -87,6 +87,7 @@ def handle_message(event):
         )
         
         # 受信したメッセージが「リセットワード」であった場合、後続処理は行わずに例外を出し、トークン超過時と同じDBのItem削除を行う。
+        # 例外先でDB削除処理が走るため、DB読み込みの前にこの処理の実施はできない。
         if chat_message == settings.RESET_WORD:
             response_message = settings.MESSAGE_RESPONSE_RESET_WORD
             raise Exception('リセットワードを受信')
