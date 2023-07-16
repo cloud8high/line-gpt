@@ -95,10 +95,13 @@ def handle_message(event):
         # GPTに投入するデータ（prompts）を用意する
         prompts = []
         
+        # UserIDから、ユーザー名を取得する。（今回は固定値のためスキップ）
+        # 参考：https://developers.line.biz/ja/reference/messaging-api/
+        
         # キャラクター基本設定を prompts に追加
         character_setting = {
             'role': 'system',
-            'content': settings.CHARACTER_SETTING.format(username=settings.SAMPLE_USERNAME)
+            'content': settings.CHARACTER_SETTING.format(username=settings.DEFAULT_USERNAME)
         }
         prompts.append(character_setting)
         
