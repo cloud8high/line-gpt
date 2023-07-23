@@ -1,16 +1,17 @@
 # 推しと LINE できるシステム （ LINE x GPT x AWS CDK ）
+![line-gpt-gif-anime](https://github.com/cloud8high/line-gpt/assets/40209684/dba7569d-cb30-4435-8e78-517a891c58e2)
+
 
 ## アプリ概要
 - アニメなどのキャラクターと、LINE でチャットができるシステムを開発しました。
     - もちろん、実態はキャラクターを演じているAIです。
 - 詳細や技術的特徴は、Qiita のこちらの記事を参照ください。
     - LTでの動画やスライド資料があります。
-    - 本資料は、主にデプロイ部分に注力しています。
  
 ## 要素技術
-- LINE Messaging API
-- Open AI API (GPT4、3.5)
-- AWS CDK (Python / API Gateway, Lambda, DynamoDB, SecretsManger)
+- [LINE Messaging API](https://developers.line.biz/ja/services/messaging-api/)
+- [Open AI API (GPT4、3.5)](https://openai.com/blog/openai-api)
+- [AWS CDK](https://aws.amazon.com/jp/cdk/) (Python / API Gateway, Lambda, DynamoDB, SecretsManger)
 
 ## アーキテクチャ図
 ![Architecture _diagram](https://github.com/cloud8high/line-gpt/assets/40209684/7df1f6fe-5714-488d-90be-dd9db329e182)
@@ -43,7 +44,7 @@ $ pip install -r requirements.txt
 $ pip install -r lambda/requirements.txt -t lambda/
 
 ## AWS CDK のブートストラップ
-##（注：AWS CDK アプリケーションを環境（アカウント/リージョン）に初めてデプロイするときのみ実施）
+## 注：AWS CDK アプリケーションを環境（アカウント/リージョン）に初めてデプロイするときのみ実施
 $ cdk bootstrap
 
 ## 設定ファイルを編集
@@ -75,26 +76,49 @@ $ cdk deploy
 2. 「LINE Official Account Manager」 → 「設定」
     - 「アカウント設定」
         - 任意に設定（アカウント名, プロフィール画像）
-        - 「プロフィールのプレビューを確認」から、背景画像や表示するボタンを任意に編集
+        - 「プロフィールのプレビューを確認」から、背景画像や表示するボタンを任意に設定
     - 「機能の利用」
         - 任意に設定
             - 例：写真や動画の受け取り　→　受け取らない
             - 例：LINE VOOM関連機能　→　利用しない
 
 
-ここまでの手順で一通り動作するようになる。  
-あとは、キャラクター設定を工夫したり、LINEの見た目にこだわるなどの工夫を進める。
+ここまでの手順で、一通り動作するようになる。  
+あとは、キャラクター設定を工夫したり、LINEの見た目にこだわるなどの工夫をする。
 
 ## 使い方メモ
-- 「リセット」とメッセージを送信すると、DBから過去のチャット内容が消えて、会話内容がリセットされる。
-    - `settings.py` を編集することで、「リセット」以外の単語をリセットワールドに設定することも可能。
+- 「リセット」とメッセージを送ると、DBから過去のチャット内容が消えて、会話内容がリセットされる。
+    - `./lambda/settings.py` を編集することで、「リセット」以外の単語をリセットワードに設定することが可能。
 - Token の上限値に達すると、DBから過去のチャット内容が消えて、会話内容がリセットされる。
-    - こちらも、`settings.py` を編集することで、Tokenの上限値よりも前にリセットをかけることが可能。
+    - こちらも、`./lambda/settings.py` を編集することで、Tokenの上限値よりも前にリセットをかけることが可能。
     - GPT API の課金が膨れ上がることを防げる。
 
+## DB設計メモ
+**DynamoDB の設計内容**
+
+| カラム名 | PK | GSI | Type | 内容 |
+| :--- | :---: | :---: | :---: | :--- |
+| ChatId | PK | | String | メッセージを一意にするID。 今回は "UserId#time" の形で発番 |
+| ChatRole |  | | String | 利用者からのメッセージは"user" / GPTからの返答は"assistant"を設定 |
+| ChatUserId |  | PK | String | 誰とのトークルームのメッセージであるかを特定するもの。[LINEのuserId](https://developers.line.biz/ja/docs/messaging-api/getting-user-ids/)を設定|
+| ChatMessage |  | | String | メッセージ本文。利用者から受け取ったメッセージや、GPTからのメッセージを保持 |
+| CreatedAt |  | SK | String | 当該レコード（Item）の作成時刻を設定 |
+
+
+**インデックス設計**
+- Primary の Partition key は ChatId
+- Global Secondary Index の Partition Key と Sort Key は、ChatUserId と CreatedAt 
+
+**CRUD処理**
+- C（作成）: 利用者がメッセージを送信した際、および、GPTから返答文を受け取った際に、Itemを追加。
+- R（読込）: DBから、当該利用者の過去のメッセージを取り出す際に、GSI を用いて Item を取得。
+- U（更新）: 当該処理なし。
+- D（削除）: リセットワードを受信した場合、および、トークンの上限値に達した場合、BatchWrite で Item を削除。
+
 ## 初期設定 「しりとり上手の高木さん」について
-- `settings.py` の `CHARACTER_SETTING` は、初期状態で、しりとりが得意な女子中学生を設定しています。
-- チャットでは、「こんにちは」や「おはよう」などのメッセージを最初に送信すると、しりとりゲームが始まる流れになります。
+- `settings.py` の `CHARACTER_SETTING` の初期値は、オリジナルキャラクター 「しりとり上手の高木さん」 を設定しています。
+    - 原作はこちら、「[からかい上手の高木さん / 山本崇一朗 小学館](https://ja.wikipedia.org/wiki/%E3%81%8B%E3%82%89%E3%81%8B%E3%81%84%E4%B8%8A%E6%89%8B%E3%81%AE%E9%AB%98%E6%9C%A8%E3%81%95%E3%82%93)」
+- 「こんにちは」や「おはよう」などのメッセージを最初に送信すると、しりとりゲームが始まる流れになります。
 - シンプルに見えて、実は色々な工夫が詰まっています。詳細は Qiita の記事などをご参照ください。
 
 ## クリーンアップ方法
@@ -106,8 +130,8 @@ $ cdk deploy
 3. OpenAI 側の API キーを削除
 4. LINE Developers の画面から、「チャネル」と「プロバイダー」を削除
 
-## ライセンス（要変更）
+## ライセンス
 - [MIT](https://github.com/cloud8high/line-gpt/blob/main/LICENSE)
 
-## 作成者について
+## 開発者について
 - [Hayate.H](https://github.com/cloud8high/profile)
